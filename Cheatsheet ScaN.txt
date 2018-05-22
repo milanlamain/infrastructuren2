@@ -1,0 +1,181 @@
+Spanning tree
+
+Config and verify Bridge ID (BID)
+- set specific switch to root bridge (methode 1):
+s1(config)# spanning-tree VLAN 1 root primary
+(priority wordt dan 24576 of hoogste veelvoud van 4096 lager dan de laagste bridge priority in het netwerk)
+of (methode 2):
+s1(config)# spanning-tree VLAN 1 priority 24576
+- set alternate root bridge:
+s1(config)# spanning-tree VLAN 1 root secondary
+
+Verify bridge priority (alle of per VLAN):
+s1# show spanning-tree
+s1# show spanning-tree VLAN <vlan_id>
+
+Configure PortFast en BPDU guard (alleen op access poort):
+s2(config)# interface f0/11
+s2(config-if)# spanning-tree portfast
+s2(config-if)# spanning-tree bpduguard enable
+
+Configure PortFast (op alle nontrunking interfaces) en BPDU guard (op alle PortFast-enabled poorten):
+s2(config)# spanning-tree portfast default
+s2(config)# spanning-tree portfast bpduguard default
+
+Rapid-PVST aanzetten:
+s2(config)# spanning-tree mode rapid-pvst
+
+
+Link Aggregation
+
+Configure interfaces
+s1(config)# interface range fe0/1-2
+s1(config-if-range)# shutdown
+s1(config-if-range)# channel-group 1 mode active
+s1(config-if-range)# exit
+s1(config)# interface port-channel 1
+s1(config-if)# switchport mode trunk
+s1(config-if)# switchport trunk allowed vlan 1,2,20
+
+Verify
+s1# show interface port-channel1
+s1# show etherchannel summary
+s1# show etherchannel port-channel
+s1# show interfaces f0/1 etherchannel
+
+
+
+OSPF
+
+Chapter 8 van R&S 5.03: Single-Area OSPF
+
+Router OSPF configuration mode
+R1(config)# router ospf /process-id/ (b.v. 1, lokaal uniek, niet netwerk uniek)
+R1(config-router)# router-id /rid/ (b.v. 1.1.1.1 <-- 32 bits getal, geen IP!)
+R1(config-router)# network /network-address/ /wildcard-mask/ area /area-id/ (b.v. network 192.168.1.0 0.0.0.255 area 0)
+of
+R1(config-router)# network /intf-ip-address/ 0.0.0.0 area /area-id/
+(b.v. network 192.168.1.254 0.0.0.0 area 0) <-- hoef je het masker niet uit te rekenen! :-)
+
+Toevoegen passive interface
+R1(config-router)# passive-interface GigabitEthernet 0/0
+
+Verify
+R1# show ip protocols <-- laat de router ID zien bij OSPF, ook passive interfaces
+
+Leeg gooien/resetten OSFP na rename RID:
+R1# clear ip ospf process
+
+
+
+
+Chapter 5 van ScaN: Adjust and Troubleshoot Single-Area OSPF
+
+R1(config)# interface GigabitEthernet0/0
+R1(config-if)# bandwidth 1000000
+R1(config-if)# exit
+R1(config)# router ospf 10
+R1(config-router)# router-id 1.1.1.1
+R1(config-router)# auto-cost reference-bandwidth 1000
+R1(config-router)# network 172.16.1.0 0.0.0.255 area 0
+R1(config-router)# network 172.16.3.0 0.0.0.255 area 0
+R1(config-router)# network 192.168.10.4 0.0.0.3 area 0
+R1(config-router)# passive-interface g0/0
+
+of (geen inverted subnetmask, dan IP van interface gebruiken):
+
+R1(config)# interface GigabitEthernet0/0
+R1(config-if)# bandwidth 1000000
+R1(config-if)# exit
+R1(config)# router ospf 10
+R1(config-router)# router-id 1.1.1.1
+R1(config-router)# auto-cost reference-bandwidth 1000
+R1(config-router)# network 172.16.1.1 0.0.0.0 area 0
+R1(config-router)# network 172.16.3.1 0.0.0.0 area 0
+R1(config-router)# network 192.168.10.5 0.0.0.0 area 0
+R1(config-router)# passive-interface g0/0
+
+(ipv6 iets soortgelijks, "network" dan in interface)
+
+In plaats van router-id te gebruiken is het in grote netwerken handiger om priority te gebruiken:
+R1(config-if)# ip ospf priority /value/  <-- op interface zodat een router op 1 interface DROTHER kan worden en een andere DR
+0 = kan geen DR of BDR worden
+1 - 255 = hoe hoger de waarde, hoe groter de kans bij verkiezing dat 'ie DR of BDR wordt
+
+Verify:
+show ip ospf neighbor
+show ip protocols
+show ip ospf
+show ip ospf interface
+show ip ospf interface brief
+
+Default static route IPv4 / GOLR (naar internet):
+R1(config)# ip route 0.0.0.0 0.0.0.0 /uplink IP of interface/
+R1(config)# router ospf 10
+R1(config-router)# default-information originate
+R1(config-router)# end
+
+Default static route IPv6 / GOLR (naar internet):
+R1(config)# ipv6 route ::/0 /uplink IPv6 of interface/
+R1(config)# ipv6 router ospf 10
+R1(config-rtr)# default-information originate
+R1(config-rtr)# end
+
+Aanpassing Hello en Dead interval IPv4 op interface-nivo:
+R1(config-if)# ip ospf hello-interval /seconds/
+R1(config-if)# ip ospf dead-interval /seconds/  <-- indien niet ingesteld, 4*hello tijd
+LET OP: iedereen moet dezelfde tijden gebruiken, anders geen buurrelaties
+
+Reset Hello en Dead IPv4:
+R1(config-if)# no ip ospf hello-interval
+R1(config-if)# no ip ospf dead-interval
+
+Bij IPv6 bovenstaand: R1(config-if)# ipv6 ospf hello...
+
+Global Md5 authenticatie (alleen bij IPv4, IPv6 gebruikt IPsec):
+R1(config)# router ospf 10
+R1(config-router)# area /area-id/ authentication message-digest
+R1(config)# interface g0/0
+R1(config-if)# ip ospf message-digest-key /key/ md5 /password/
+R1(config-if)# exit
+
+Per interface Md5:
+R1(config)# interface g0/0
+R1(config-if)# ip ospf message-digest-key /key/ md5 /password/
+R1(config-if)# ip ospf authentication message-digest
+R1(config-if)# exit
+
+
+
+Chapter 6: Multiarea OSPF
+
+IPv4:configureren van een ABR (Area Border Router, interfaces in meerdere areas):
+R1(config)# router ospf 10   <-- die 10 is proces-ID en heeft niets met areas te maken
+R1(config-router)# router-id 1.1.1.1
+R1(config-router)# network 10.1.1.1 0.0.0.0 area 1
+R1(config-router)# network 10.1.2.1 0.0.0.0 area 1
+R1(config-router)# network 192.168.10.1 0.0.0.0 area 0   <-- area 0 is backbone
+R1(config-router)# end
+
+IPv6:configureren van een ABR
+R1(config)# ipv6 router ospf 10
+R1(config-rtr)# router-id 1.1.1.1
+R1(config-rtr)# exit
+R1(config)# interface g0/0
+R1(config-if)# ipv6 ospf 10 area 1
+R1(config-if)# exit
+R1(config)# interface s0/0/1
+R1(config-if)# ipv6 ospf 10 area 0   <-- backbone
+R1(config-if)# exit 
+
+IPv4:enable route summarization (alleen op ABR of ASBR (=Autonomous System Boundary Router)):
+R1(config)# router ospf 10
+R1(config-router)# area 1 range 10.1.0.0 255.255.252.0
+(netwerkadres en masker moet je zelf uitrekenen op basis van aangesloten netwerken!)
+
+IPv6:enable route summarization:
+R1(config)# ipv6 router ospf 10
+R1(config-rtr)# area 1 range [prefix/prefix-length]
+(prefix en prefix-lengte moet je zelf uitrekenen op basis van aangesloten netwerken!)
+
+

@@ -1,0 +1,768 @@
+no ip domain lookup
+
+#### (initial) config ####
+
+1. Name the device
+Router# configure terminal
+Router(config)# hostname [hostname]
+
+2. Secure management access
+R1(config)# enable secret class
+R1(config)# line console 0
+R1(config-line)# password cisco
+R1(config-line)# login
+R1(config-line)# exit
+R1(config)# 
+R1(config)# line vty 0 4 <--- afhankelijk van aantal vty's!
+R1(config-line)# password cisco
+R1(config-line)# login
+R1(config-exit)# exit
+R1(config)# 
+R1(config)# service password-encryption
+R1(config)# 
+
+R1(config)#
+[c/p]
+hostname [hostname]
+banner motd $Autorized Access Only!$
+enable secret class
+line console 0
+password cisco
+login
+exit
+line vty 0 4
+password cisco
+login
+exit
+service password-encryption
+
+Switch:
+interface vlan [vlan]
+ip address [ip] [mask]
+no shutdown
+exit
+ip default-gateway [gateway]
+[/c/p]
+
+3. Configure a banner
+R1(config)# banner motd $Autorized Access Only!$
+
+[...] 4. Save the changes
+R1# copy running-config startup-config
+
+
+#### configure interface ipv4 ####
+
+R1(config)# interface gigabitethernet 0/0
+R1(config-if)# description Link to LAN 1
+R1(config-if)# ip address 192.168.10.1 255.255.255.0
+R1(config-if)# no shutdown
+R1(config-if)# exit
+R1(config)#
+
+R1(config)# interface serial 0/0/0
+R1(config-if)# description Link to R2
+R1(config-if)# ip address 209.165.200.225 255.255.255.252
+R1(config-if)# clock rate 128000
+R1(config-if)# no shutdown
+R1(config-if)# exit
+R1(config)# 
+
+(link komt up als de andere kant ook geconfigureerd is)
+
+
+#### configure interface ipv6 ####
+
+R1(config)# interface gigabitethernet 0/0
+R1(config-if)# description Link to LAN 1
+R1(config-if)# ipv6 address 2001:db8:acad:1::1/64
+R1(config-if)# no shutdown
+R1(config-if)# exit
+R1(config)#
+
+
+#### configure loopback ####
+
+R1(config)# interface loopback 0
+R1(config-if)# ip address 10.0.0.1 255.255.255.0
+R1(config-if)# exit
+R1(config)# 
+
+(geen 'no shutdown'?)
+
+
+#### show commands ####
+
+R1# show ip interface brief <-- summary for all interfaces
+R1# show ip interface [interface] [id] <-- specific interface
+R1# show ip route <-- ipv4 routing table
+R1# show ip route static
+R1# show ip route [network] <-- bijvoorbeeld 192.168.2.1
+R1# show interface [interface] [id]
+
+R1# show ipv6 interface brief
+R1# show ipv6 interface [interface] [id]
+R1# show ipv6 route
+
+R1# show cdp neighbors details
+
+
+#### filtering ####
+
+R1# show [iets] | section [section]
+R1# show [iets] | include [dit wel]
+R1# show [iets] | exclude [dit niet]
+R1# show [iets] | begin [vanaf]
+
+
+#### history ####
+
+R1# terminal history size 200
+
+
+#### show doen vanuit interface ####
+
+R1(config-if)# do show ip interface brief
+
+(do maakt aanroep hoger gelegen commando mogelijk zonder exit)
+
+
+#### (default) static route, ipv4 ####
+Hoge distance = floating
+
+static route:
+R1(config)# ip route network mask { next-hop-ip | exit-inf } [distance]
+
+default route (= gateway of last result):
+R1(config)# ip route 0.0.0.0 0.0.0.0 { next-hop-ip | exit-inf }
+R1(config)# ip route 0.0.0.0 0.0.0.0 s0/0/0 <-- out-going interface
+of
+R1(config)# ip route 0.0.0.0 0.0.0.0 1.2.3.4 <-- next hop IP
+of
+R1(config)# ip route 0.0.0.0 0.0.0.0 s0/0/0 1.2.3.4 <-- beide
+
+
+#### (default) static route, ipv6 ####
+Hoge distance = floating
+
+static route:
+R1(config)# ipv6 route ipv6-prefix/prefix-length { ipv6-address | interface-type interface-number } [distance]
+B.v.:
+R1(config)# ipv6 route 2001:DB8:ACAD:1::/64 2001:DB8:ACAD:3::1
+R1(config)# ipv6 route 2001:DB8:ACAD:1::/64 s0/0/0
+
+default route:
+R1(config)# ipv6 route ::/0 { ipv6-address | interface-type interface-number }
+R1(config)# ipv6 route ::/0 s0/0/0
+
+
+#### enable ipv6 routing ####
+
+R1(config)# ipv6 unicast-routing
+
+
+
+#### extended ping ####
+
+ping [destination] source [source]
+
+
+#### ripv1 (=classful) /v2 (=classless, dus incl. subnetmask) ####
+
+R1(config)# router rip <-- nog niet aan
+R1(config-router)# ? <-- commando's voor verdere config
+R1(config-router)# network [ip-adres van netwerk, b.v. .0] <-- zet rip aan voor dat netwerk en die interfaces
+R1(config-router)# version 2 <-- ga naar ripv2
+R1(config-router)# no auto-summary <-- (alleen voor ripv2) geen "automatic network summarization"
+
+R1(config-router)# passive-interface [interface] [id] (bijvoorbeeld g0/0) <-- verstuurt geen routing protocol packets via deze link 
+R1(config-router)# passive-interface default <-- alle interfaces passive ...
+R1(config-router)# no passive-interface [i] [id] <-- ... en deze dan enablen.
+
+Propagate default route:
+R1(config)# ip route 0.0.0.0 0.0.0.0 [interface|IP]
+R1(config)# router rip
+R1(config-router)# default-information originate
+
+R1(config)# no router rip <-- weer uit
+
+Informatie:
+R1# show ip protocols <-- geeft info over actieve dynamic routing protocol
+R1# show ip route <-- geeft de routes. Prefix "R" = RIP.
+
+
+#### switch config ####
+S1(config)# boot system flash:/path/file.bin
+S1(config)# dir flash:
+
+VLAN maken:
+S1(config)# vlan vlan_id
+S1(config-vlan)# name vlan_name
+S1(config-vlan)# exit
+S1(config)# interface interface_id
+S1(config-if)# switchport access vlan vlan_id
+
+IP adres geven:
+S1# configure terminal
+S1(config)# interface vlan 99
+S1(config-if)# ip address 172.17.99.11 255.255.255.0
+S1(config-if)# no shutdown
+S1(config-if)# exit
+S1(config)# ip default-gateway 172.17.99.1
+S1(config)# exit
+S1# show ip interface brief
+S1# copy running-config startup-config
+
+Speed/duplex/mdix
+S1(config-if)# speed 100
+S1(config-if)# duplex full
+S1(config-if)# mdix auto
+
+Switch show commando's
+S1# show controllers ethernet-controller fa 0/1 phy | include Auto-MDIX <-- check de mdix status
+S1# show interfaces [interface_id]
+S1# show startup-config/running-config
+S1# show flash/version/history
+S1# show ip [interface_id]
+S1# show mac-address-table
+
+SSH aanzetten
+S1# show ip ssh <-- check of de switch SSH aan kan
+S1# config t
+S1(config)# ip domain-name cisco.com 
+S1(config)# crypto key generate rsa
+S1(config)# username mea secret culpa
+S1(config)# line vty 0 15
+S1(config-line)# transport input ssh
+S1(config-line)# login local
+_hier_nog_mogelijk_een_access-class_ <-- zie bij ACLs!
+S1(config-line)# exit
+S1(config)# ip ssh version 2
+S1(config)# exit
+
+S1# show ssh <-- laat de huidige connecties zien
+
+Range
+S1(config)# interface range /type/ /module/ / /first-number - last-number/ <-- f0/2-3
+
+Port security
+S1(config)# interface f0/19
+S1(config-if)# switchport mode access
+S1(config-if)# switchport port-security
+S1(config-if)# switchport port-security maximum 10
+S1(config-if)# switchport port-security mac-address sticky <-- leest in en onthoudt
+S1(config-if)# switchport port-security violation {protect|restrict|shutdown}
+S1# show port-security interface f0/19
+S1# show port-security address
+Als down door security violation, dan up krijgen door eerst "shutdown", dan "no shutdown"
+
+
+#### VLANs ####
+
+Maken VLAN
+S1# configure terminal
+S1(config)# vlan /vlan-id/
+S1(config-vlan)# name /vlan-name/
+S1(config-vlan)# exit
+S1(config)# vlan /vlan-range/ <-- bijvoorbeeld 101,102-105
+S1(config)# exit
+S1# show vlan brief
+
+Toevoegen port aan VLAN
+S1# configure terminal
+S1(config)# interface /interface_id/ of range /.../
+S1(config-if)# switchport mode access
+S1(config-if)# switchport access vlan /vlan_id/
+S1(config-if)# end
+
+Verwijderen (terug naar VLAN1)
+S1(config-if)# no switchport access vlan
+
+Status VLAN in relatie tot interface
+S1# show interface /interface_id/ switchport
+
+Verwijderen VLAN
+S1(config)# no vlan /vlan_id/
+
+Verwijderen alle VLANs
+S1# delete flash:vlan.dat
+(S1# erase startup-config)
+
+Informatie "gewone VLAN"
+S1# show vlan brief
+S1# show vlan summary
+S1# show vlan id /vlan_id/
+S1# show vlan name /vlan-name/
+S1# show interfaces /interface_id/ switchport
+S1# show interfaces vlan /vlan-id/
+S1# show interfaces vlan /vlan-id/ switchport
+
+Maken Trunk
+S1# configure terminal
+S1(config)# interface /interface_id/ of range /.../
+S1(config-if)# switchport mode trunk
+S1(config-if)# switchport trunk native vlan /vlan_id/
+S1(config-if)# switchport trunk allowed vlan /vlan-list/
+S1(config-if)# end
+
+Verwijderen Trunk
+S1# configure terminal
+S1(config)# interface /interface_id/ of range /.../
+S1(config-if)# no switchport trunk allowed vlan
+S1(config-if)# no switchport trunk native vlan
+S1(config-if)# switchpoirt mode access <-- eventueel
+S1(config-if)# end
+
+Informatie Trunk
+S1# show interfaces trunk
+S1# show interface /interface/ switchport 
+
+Router-on-a-Stick
+R1(config)# interface /interface_id/ /subinterface_id/
+b.v. R1(config)# interface g0/0.10 <-- 10 = VLAN
++ R1(config-subif)# encapsulation dot1q /vlan_id/ [native]
+b.v. R1(config-subif)# encapsulation dot1q 10 <-- 10 = VLAN
+b.v. R1(config-subif)# encapsulation dot1q 99 native <-- 99 = VLAN, is tevens native VLAN voor untagged verkeer!
+daarna:
+R1(config-subif)# ip address /ip/ /subnet/
+R1(config)# interface g0/0
+R1(config-if)# no shutdown <-- interface en alle sub-interfaces komen up!
+
+
+#### ACLs #### <-- let op: iedere ACL heeft een impliciete DENY aan het eind!
+
+Syntax (numbered)
+R1(config)# access-list /access-list-number/ {deny|permit|remark} /source/ [/source-wildcard/] [log]
+
+Maken ACL (numbered)
+R1(config)# access-list 10 remark Allow/Deny host 192.168.1.10
+R1(config)# access-list 10 permit/deny host 192.168.10.10
+
+Verwijderen ACL (numbered)
+R1(config#) no access-list ...
+
+Editen van ACEs
+R1(config#) show run | include access-list 1
+[copy/paste output in editor, verbeter]
+R1(config#) no access-list 1
+R1(config#) [paste de nieuwe access list entries]
+_of_
+R1(config)# do show access-list 1 <-- toont regels met sequence nummers
+R1(config)# ip access-list standard 1
+R1(config-std-nacl)# no /regel/ <-- alleen om regel te verwijderen
+R1(config-std-nacl)# /regel/ [permit/deny] ...  <-- overschrijven oude regel vereist eerst "no". 
+R1(config-std-nacl)# exit
+
+Syntax (named)
+R1(config)# ip access-list [standard|extended] /name/
+R1(config-std-nacl)#  [permit|deny|remark] { /source/ } [/source-wildcard/] [log]
+
+Maken ACL (named)
+R1(config)# ip access-list standard NO_ACCESS
+R1(config-std-nacl)# remark Deny host 192.168.11.10
+R1(config-std-nacl)# deny host 192.168.11.10
+R1(config-std-nacl)# permit any
+R1(config-std-nacl)# exit
+
+Verwijderen ACL (named)
+R1(config)# no access-list ...
+
+Linken aan interface
+R1(config)# interface g0/0
+Syntax: R1(config-if)# ip access-group { /access-list-number/ | /access-list-name/ } {in|out}
+R1(config-if)# ip access-group 10 out
+R1(config-if)# ip access-group NO_ACCESS out
+
+Un-linken van interface
+R1(config-if)# no ip access-group 10 out
+
+Informatie:
+R1# show access-lists
+R1# show access-lists 1
+R1# show access-lists name
+R1# show ip interface /interface_id/ <-- laat ACL op interface zien
+R1# clear access-lists counters {/number/|/name/}
+
+Access-class (voor line bescherming):
+R1(config)# line vty 0 15
+R1(config-line)# ...
+R1(config-line)# access-class {/number/|/name/} in
+R1(config-line)# ...
+R1(config-line)# exit
+R1(config)# access-list {/number/|/name/} permit 192.168.10.0 0.0.0.255 <-- sta toe uit dit netwerk
+R1(config)# access-list {/number/|/name/} deny any
+
+Omnummeren van sequence nummers:
+R1# copy running-config startup-config
+R1# reload
+
+Hetzelfde:
+R1(config)# access-list 1 permit/deny 0.0.0.0 255.255.255.255
+=
+R1(config)# access-list 1 permit/deny any
+
+Hetzelfde:
+R1(config)# access-list 1 permit/deny 192.168.10.10 0.0.0.0
+=
+R1(config)# access-list 1 permit/deny host 192.168.10.10
+
+
+#### DHCP IPv4 (UDP poorten 67,68) ####
+
+IPv4 server aanzetten:
+R1(config)# ip dhcp excluded-address 192.168.10.1 192.168.10.9
+R1(config)# ip dhcp excluded-address 192.168.10.254
+R1(config)# ip dhcp pool LAN-POOL-1
+R1(dhcp-config)# network 192.168.10.0 255.255.255.0
+R1(dhcp-config)# default-router 192.168.10.1
+R1(dhcp-config)# dns-server 192.168.11.5
+R1(dhcp-config)# domain-name example.com
+R1(dhcp-config)# lease ...
+R1(dhcp-config)# netbios-name-server ...
+R1(dhcp-config)# end
+R1#
+
+IPv4 server uitzetten:
+R1(config)# no service dhcp
+
+IPv4 Informatie:
+R1# show run | section dhcp
+R1# show ip dhcp binding
+R1# show ip dhcp server statistics
+R1# show ip dhcp conflict
+
+IPv4 Debug:
+R1(config)# access-list 100 permit udp any any eq 67
+R1(config)# access-list 100 permit udp any any eq 68
+R1(config)# end
+R1# debug ip packet 100
+[...]
+_en_
+R1# debug ip dhcp server events
+[...]
+
+IPv4 DHCP relay: (helper-address doet Time (37), TACACS (49), DNS (53), DHCP (67,68), TFTP (69), NetBIOS (137,138)
+R1(config)# interface g0/0 <-- inbound interface van het netwerk vanwaaruit de dhcp request komt en doorgestuurd moet worden
+R1(config-if)# ip helper-address 192.168.11.6
+R1(config-if)# exit
+
+IPv4 client aanzetten:
+SOHO(config)# interface g0/1
+SOHO(config-if)# ip address dhcp
+SOHO(config-if)# no shutdown
+SOHO(config-if)# end
+SOHO# show ip interface g0/1
+
+
+#### DHCP IPv6 (UDP poorten 546,547) ####
+--> altijd "R1(config)# ipv6 unicast-routing" nodig! <--
+
+SLAAC zonder DHCPv6:
+R1(config-if)# no ipv6 nd managed-config-flag
+R1(config-if)# no ipv6 nd other-config-flag
+
+SLAAC met stateless DHCPv6:
+R1(config-if)# no ipv6 nd managed-config-flag
+R1(config-if)# ipv6 nd other-config-flag
+
+SLAAC met stateful DHCPv6:
+R1(config-if)# ipv6 nd managed-config-flag
+
+IPv6 DHCPv6 stateless server:
+R1(config)# ipv6 unicast-routing
+R1(config)# ipv6 dhcp pool IPV6-STATELESS
+R1(config-dhcpv6)# dns-server 2001:db8:cafe:aaaa::5
+R1(config-dhcpv6)# domain-name example.com
+R1(config-dhcpv6)# exit
+R1(config)# interface g0/1
+R1(config-if)# ipv6 address 2001:db8:cafe:1::1/64
+R1(config-if)# ipv6 dhcp server IPV6-STATELESS
+R1(config-if)# ipv6 nd other-config-flag
+                       ^^^^^
+
+IPv6 client aanzetten bij stateLESS DHCPv6:
+R3(config)# interface g0/1
+R3(config-if)# ipv6 enable
+R3(config-if)# ipv6 address autoconfig
+R3(config-if)# no shutdown
+
+IPv6 DHCPv6 stateful server (default gateway niet nodig, client gebruikt link-local adres van RA!)
+R1(config)# ipv6 unicast-routing
+R1(config)# ipv6 dhcp pool IPV6-STATEFUL
+R1(config-dhcpv6)# address prefix 2001:db8:cafe:1::/64 lifetime infinite
+R1(config-dhcpv6)# dns-server 2001:db8:cafe:aaaa::5
+R1(config-dhcpv6)# domain-name example.com
+R1(config-dhcpv6)# exit
+R1(config)# interface g0/1
+R1(config-if)# ipv6 address 2001:db8:cafe:1::1/64
+R1(config-if)# ipv6 dhcp server IPV6-STATEFUL
+R1(config-if)# ipv6 nd managed-config-flag
+                       ^^^^^^^
+
+IPv6 client aanzetten bij stateFUL DHCPv6:
+R3(config)# interface g0/1
+R3(config-if)# ipv6 enable
+R3(config-if)# ipv6 address dhcp
+R3(config-if)# no shutdown
+
+DHCPv6 informatie:
+R1# show ipv6 dhcp pool
+R1# show ipv6 interface /interface_id/
+R1# debug ipv6 dhcp detail
+R1# show ipv6 dhcp binding <-- bij stateful DHCPv6
+
+IPv6 DHCPv6 relay: (helper-address doet Time (37), TACACS (49), DNS (53), DHCP (67,68), TFTP (69), NetBIOS (137,138)
+R1(config)# interface g0/0 <-- interface van het netwerk vanwaaruit de dhcp request komt en doorgestuurd moet worden
+R1(config-if)# ipv6 dhcp relay destination 2001:db8:cafe:1::6
+R1(config-if)# end
+R1# show ipv6 dhcp interface g0/0
+[...]
+
+
+#### NAT ####
+
+Static NAT (van buiten naar binnen) (webserver is 192.168.10.254, public IP is 209.165.201.5, Serial0/0/0 is inside)
+R2(config)# ip nat inside source static 192.168.10.254 209.165.201.5
+R2(config)# interface Serial0/0/0
+R2(config-if)# ip nat inside
+R2(config-if)# exit
+R2(config)# interface Serial0/1/0
+R2(config-if)# ip nat outside
+R2(config-if)# exit
+
+Dynamic NAT (van binnen naar buiten) (2 PC's 192.168.10.10/24 & 192.168.11.10/24, public IP range)
+R2(config)# ip nat pool NAT-POOL1 209.165.200.226 209.165.200.240 netmask 255.255.255.224
+R2(config)# access-list 1 permit 192.168.0.0 0.0.255.255
+R2(config)# ip nat inside source list 1 pool NAT-POOL1
+R2(config)# interface Serial0/0/0
+R2(config-if)# ip nat inside
+R2(config-if)# exit
+R2(config)# interface Serial0/1/0
+R2(config-if)# ip nat outside
+R2(config-if)# exit
+
+PAT #1 (van binnen naar buiten) (2 PC's 192.168.10.10/24 & 192.168.11.10/24, public IP range 209.165.200.224/27)
+R2(config)# ip nat pool NAT-POOL2 209.165.200.225 209.165.200.254 netmask 255.255.255.224
+R2(config)# access-list 1 permit 192.168.0.0 0.0.255.255
+R2(config)# ip nat inside source list 1 pool NAT-POOL2 overload
+R2(config)# interface Serial0/0/0                      ^^^^^^^^
+R2(config-if)# ip nat inside
+R2(config-if)# exit
+R2(config)# interface Serial0/1/0
+R2(config-if)# ip nat outside
+R2(config-if)# exit
+
+PAT #2 (van binnen naar buiten) (2 PC's 192.168.10.10/24 & 192.168.11.10/24, 1 public IP adres)
+R2(config)# access-list 1 permit 192.168.0.0 0.0.255.255
+R2(config)# ip nat inside source list 1 interface Serial0/1/0 overload
+R2(config)# interface Serial0/0/0                         ^   ^^^^^^^^
+R2(config-if)# ip nat inside
+R2(config-if)# exit
+R2(config)# interface Serial0/1/0
+R2(config-if)# ip nat outside
+R2(config-if)# exit
+
+Port-forwarding (van buiten naar binnen)
+R2(config)# ip nat inside source static tcp 192.168.10.254 80 209.165.200.225 8080
+R2(config)# interface Serial0/0/0
+R2(config-if)# ip nat inside
+R2(config-if)# exit
+R2(config)# interface Serial0/1/0
+R2(config-if)# ip nat outside
+R2(config-if)# exit
+
+Informatie:
+R2# show ip nat translations
+R2# show ip nat translations verbose
+R2# show ip nat statistics
+R2# clear ip nat statistics
+R2# debug ip nat
+R2# debug ip nat detailed
+
+Verwijderen table entries
+R2# clear ip nat translation
+R2# clear ip nat translation *
+
+
+#### Device Discovery (CDP) ####
+
+Globaal aanzetten:
+R1(config)# cdp run
+R1# show cdp
+
+Globaal uitzetten:
+R1(config)# no cdp run
+
+Per interface uitzetten(/aanzetten):
+R1(config)# interface g0/0
+R1(config-if)# no cdp enable
+R1(config-if)# cdp enable
+
+Informatie:
+R1# show cdp neighbors
+R1# show cdp neighbors detail
+R1# show cdp interface
+
+
+#### Device Discovery (LLDP) ####
+
+Globaal aanzetten:
+R1(config)# lldp run
+R1# show lldp
+
+Globaal uitzetten:
+R1(config)# no lldp run
+
+Per interface uitzetten(/aanzetten):
+R1(config)# interface g0/0
+R1(config-if)# no lldp transmit
+R1(config-if)# no lldp receive
+R1(config-if)# lldp transmit
+R1(config-if)# lldp receive
+(R1(config-if)# no lldp run ???? Op interface-nivo ????)
+
+Informatie:
+R1# show lldp neighbors
+R1# show lldp neighbors detail
+R1# show lldp interface
+
+
+#### Clock ####
+
+Timezone: (PST = Pacific Standard Time)
+R1(config)# clock timezone PST -8
+
+Zomertijd: (PDT = Pacific Daylight Time)
+R1(config)# clock summer-time PDT recurring
+
+
+#### NTP (UDP 123) ####
+
+Aanzetten:
+R1(config)# ntp server /ipv4-adres/
+
+Informatie:
+R1# show clock detail
+R1# show ntp associations
+R1# show ntp status
+
+
+#### Syslog (UDP 514) ####
+
+Datum-tijd stempel aanzetten:
+R1(config)# service timestamps log datetime
+
+Console logging en buffer logging aanzetten: (=default aan)
+R1(config)# logging console
+R1(config)# logging buffer
+
+Remote server instellen:
+R1(config)# logging /ipv4-adres/
+R1(config)# logging trap /trap-level/
+R1(config)# logging source-interface /interface_id/ <-- optioneel, de IPv4/v6 adres(sen) van dit interface komen dan in de logging als bron
+
+Testen:
+R1(config)# interface loopback 0
+R1(config)# shutdown
+R1(config)# no shutdown
+
+Informatie:
+R1# show logging
+R1# show logging | include changed state to up
+R1# show logging | begin Jun 12 22:35
+
+
+#### File System ####
+
+Informatie:
+R1# show file systems <-- output: *=current default, #=bootable
+[...]
+R1# dir
+[...]
+R1# dir usbflash0:
+R1# dir nvram:
+R1# cd nvram:
+R1# pwd
+R1# dir
+[...]
+
+Backup config:
+1. Start log proces in Tera Term
+R1# show running-config
+2. Close the log
+
+Restore config:
+1. Pulldown->Send file in Tera Term
+2. Locate the file
+3. Tera Term will past the file into the device, "playing" the content
+
+TFTP Backup/Restore config:
+B: copy running-config tftp
+R: copy tftp running-config
+
+USB Backup/Restore config:
+B: copy running-config usbflash0:
+R: copy usbflash0:/somefile running-config <-- let erop dat somefile geen "more"-output bevat! Eerst editen!
+
+TFTP Backup/Restore Image:
+B: copy flash0: tftp:
+R: copy tftp: flash0:
+
+Instellen nieuwe versie:
+R1# conf t
+R1(config)# boot system flash0://c1900-uni...bin
+R1(config)# exit
+R1# copy running-config startup-config
+R1# reload
+[...]
+R1# show version
+
+
+#### Password recovery ####
+
+1. Break-sequence Ctrl-Break
+2. rommon 1 > confreg 0x2142
+3. rommon 2 > reset
+R1# copy startup-config running-config
+R1# conf t
+R1(config)# enable ... <-- herstel de wachtwoorden
+R1(config)# config-register 0x2102
+R1(config)# end
+R1# copy running-config startup-config
+R1# reload
+
+
+#### Licensing ####
+
+Activatie:
+R1# license install flash0:/filename.xml/
+R1# reload <-- hoeft niet als er al een eval-versie van het gelicenseerde component draait
+
+Accepteer EULA:
+R1(config)# license accept end user agreement
+
+Start evalutie:
+R1(config)# license boot module /module-name/ technology-package /package-name/
+
+Backup licenses:
+R1# license save flash0:all_licenses.lic
+R1# show flash0:
+
+Uninstall license:
+1. Disable
+R1(config)# license boot module /module-name/ technology-package /package-name/ disable
+R1(config)# exit
+R1# reload
+2. Clear
+R1# license clear /package-name/
+R1# conf t
+R1(config)# no license boot module /module-name/ technology-package /package-name/
+R1(config)# exit
+R1# reload
+
+Informatie:
+R1# show version
+R1# show license
+R1# show license feature
+R1# show license udi <-- Unique Device Identifier = Product ID + Serial Number
+
