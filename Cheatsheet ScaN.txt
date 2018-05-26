@@ -44,7 +44,6 @@ s1# show etherchannel port-channel
 s1# show interfaces f0/1 etherchannel
 
 
-
 OSPF
 
 Chapter 8 van R&S 5.03: Single-Area OSPF

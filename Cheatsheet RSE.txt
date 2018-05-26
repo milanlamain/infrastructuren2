@@ -13,7 +13,7 @@ R1(config-line)# password cisco
 R1(config-line)# login
 R1(config-line)# exit
 R1(config)# 
-R1(config)# line vty 0 4 <--- afhankelijk van aantal vty's!
+R1(config)# line vty 0 4 <-- afhankelijk van aantal vty's!
 R1(config-line)# password cisco
 R1(config-line)# login
 R1(config-exit)# exit
