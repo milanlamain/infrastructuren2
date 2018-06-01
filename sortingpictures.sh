@@ -22,13 +22,14 @@ do
 done
 
 #If user typed in 'month' then this if statement will go through
+#Ik heb gekozen om een if else statement te doen. Het is niet de meeste elegante oplossing maar het werkt wel. De rest van de comments zijn in engels omdat de keywoorden in die taal makkelijker zijn.
 find ~/$DIR/* -maxdepth 1 -type f |
 for i in ~/$DIR/* 
 do
 if [ $worm == 'month' ];then
 	#Get file date
 	month="$(date -d "$(stat -c %y "$i")" +%b)"
-	#echo $month
+	#echo $month (Debugging)
 	
 	#If the folder of the month does not exist make the folder
 	[[ ! -d "$BASE_DIR/$month" ]] && mkdir -p "$DIR/$month";
@@ -36,6 +37,7 @@ if [ $worm == 'month' ];then
 	#Copy the files to the new directory
 	cp "$i" "$DIR/$month"
 	
+	#/dev/null Is being used to store the temporary file otherwise rm would just remove it
 	if diff $i $DIR/$month >/dev/null ;then
 	rm $i
 	fi
@@ -43,7 +45,7 @@ if [ $worm == 'month' ];then
 else [ $worm == 'week' ]
 	#Get file dates
 	week="$(date -d "$(stat -c %y "$i")" +%W)"
-	#echo $week
+	#echo $week 
 	
 	#If the folder of the month does not exist make the folder
 	[[ ! -d "$BASE_DIR/$week" ]] && mkdir -p "$DIR/$week";
