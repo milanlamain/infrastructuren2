@@ -35,8 +35,12 @@ if [ $worm == 'month' ];then
 
 	#Copy the files to the new directory
 	cp "$i" "$DIR/$month"
+	
+	if diff $i $DIR/$month >/dev/null ;then
+	rm $i
+	fi
 
-else [ $worm == 'week' ];then
+else [ $worm == 'week' ]
 	#Get file dates
 	week="$(date -d "$(stat -c %y "$i")" +%W)"
 	#echo $week
@@ -47,6 +51,9 @@ else [ $worm == 'week' ];then
 	#Copy the files to the new directory
 	cp "$i" "$DIR/$week"
 
+	if diff $i $DIR/$week >/dev/null ;then
+	rm $i
+	fi
 
 fi
 done
