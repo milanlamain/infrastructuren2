@@ -4,6 +4,3 @@ apache2:
     - require:
       - pkg: apache2
 
-munin:
-  pkg.installed:
-    - pkg: munin

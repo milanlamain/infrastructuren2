@@ -1,3 +1,3 @@
-munin_master:
- pkg.installed:
-   - name: munin_master.package
+munin:
+  pkg.installed:
+    - pkg: munin
