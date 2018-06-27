@@ -3,3 +3,7 @@ apache2:
   service.running:
     - require:
       - pkg: apache2
+
+munin:
+  pkg.installed:
+    - pkg: munin
