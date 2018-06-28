@@ -6,7 +6,7 @@
       - "logdir /var/log/munin"
       - "rundir /var/run/munin"
 
-/etc/munin/munin.conf:
+replacelocalhost:
   file.replace:
    - name: /etc/munin/munin.conf
    - pattern: "localhost.localdomain"
