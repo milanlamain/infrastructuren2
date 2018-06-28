@@ -7,12 +7,12 @@
 wordpress_app:
   docker_container.running:
     - name: wordpress_app
-    - image: repo/wordpress/wordpress:latest
-    - port_bindings: 80:80
+    - image: wordpress:latest
+    - port_bindings: 8080
     - environment:
-      - WORDPRESS_DB_HOST: wordpress_db:3306
+      - WORDPRESS_DB_HOST: db:3306
       - WORDPRESS_DB_PASSWORD: wordpress
-    - links: wordpress_db:mysql
+    - links: wordpress:mysql
 
 wordpress_db:
   docker_container.running:
@@ -23,3 +23,5 @@ wordpress_db:
     - environment:
       - MYSQL_ROOT_PASSWORD: wordpress
       - MYSQL_DATABASE: wordpress
+      - MYSQL_USER: wordpress
+      - MYSQL_PASSWORD: wordpress
